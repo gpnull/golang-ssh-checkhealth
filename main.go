@@ -112,7 +112,7 @@ func checkLogChanges() {
 	ips := viper.GetStringSlice("IPs")
 
 	for _, ip := range ips {
-		command := fmt.Sprintf(viper.GetString("SSHLogCommand"), ip)
+		command := fmt.Sprintf(viper.GetString("SSHErrorLogCommand"), ip)
 		output, err := runSSHCommand(command)
 		if err != nil {
 			log.Println("Error running log check command:", err)
@@ -162,7 +162,12 @@ func contains(lines []string, line string) bool {
 }
 
 func checkHealth() {
-	commands := viper.GetStringSlice("SSHCommands")
+	ips := viper.GetStringSlice("IPs")
+	var commands []string
+	for _, ip := range ips {
+		command := fmt.Sprintf(viper.GetString("SSHCommands"), ip)
+		commands = append(commands, command)
+	}
 
 	// Call the log change check function
 	checkLogChanges()
