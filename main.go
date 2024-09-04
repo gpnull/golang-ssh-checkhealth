@@ -112,6 +112,9 @@ func checkHealth() {
 	var errorMessages []string
 	var highUsage bool
 
+	var totalCPU, totalMem, totalDisk float64
+	var count int
+
 	for i, command := range commands {
 		output, err := runSSHCommand(command)
 		if err != nil {
@@ -132,12 +135,24 @@ func checkHealth() {
 		message := fmt.Sprintf("Server %d - CPU Usage: %.2f%%, Memory Usage: %.2f%%, Disk Usage: %.2f%%, Uptime: %s", i+1, cpu, mem, disk, uptime)
 		messages = append(messages, message)
 
+		totalCPU += cpu
+		totalMem += mem
+		totalDisk += disk
+		count++
+
 		if cpu > 80 || mem > 80 || disk > 80 {
 			highUsage = true
 		}
 	}
 
-	finalMessage := "Health Check:\n" + strings.Join(messages, "\n")
+	// Calculate average usage
+	avgCPU := totalCPU / float64(count)
+	avgMem := totalMem / float64(count)
+	avgDisk := totalDisk / float64(count)
+
+	finalMessage := "\nHealth Check:\n" + strings.Join(messages, "\n")
+	finalMessage += fmt.Sprintf("\n|=> Average CPU Usage: %.2f%%, Average Memory Usage: %.2f%%, Average Disk Usage: %.2f%%", avgCPU, avgMem, avgDisk)
+
 	if highUsage {
 		sendTelegramMessage("Warning: High resource usage detected!\n" + finalMessage)
 	} else {
