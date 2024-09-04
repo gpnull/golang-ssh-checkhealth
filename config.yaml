@@ -1,0 +1,5 @@
+telegramBotToken: "telegramBotToken"
+telegramChatID: 7393723946
+SSHCommands:
+  - "ssh controller@35.244.59.150 \"echo 'Uptime:' && uptime && echo 'CPU Usage:' && top -bn1 | grep 'Cpu(s)' && echo 'Memory Usage:' && free -m && echo 'Disk Usage:' && df -h /\""
+  - "ssh controller@34.93.102.218 \"echo 'Uptime:' && uptime && echo 'CPU Usage:' && top -bn1 | grep 'Cpu(s)' && echo 'Memory Usage:' && free -m && echo 'Disk Usage:' && df -h /\""
