@@ -15,6 +15,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+var previousLogContent string
+var isFirstCheck bool = true
+
 func initConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -105,8 +108,64 @@ func parseSSHOutput(output string) (float64, float64, float64, string, error) {
 	return cpuUsage, memUsage, diskUsage, uptime, nil
 }
 
+func checkLogChanges() {
+	ips := viper.GetStringSlice("IPs")
+
+	for _, ip := range ips {
+		command := fmt.Sprintf(viper.GetString("SSHLogCommand"), ip)
+		output, err := runSSHCommand(command)
+		if err != nil {
+			log.Println("Error running log check command:", err)
+			continue
+		}
+
+		if isFirstCheck {
+			previousLogContent = output
+			isFirstCheck = false
+			continue
+		}
+
+		if output != previousLogContent {
+			// Find the new content added
+			newLines := strings.Split(output, "\n")
+			oldLines := strings.Split(previousLogContent, "\n")
+
+			// Get the newest lines
+			var changes []string
+			for _, newLine := range newLines {
+				if !contains(oldLines, newLine) {
+					changes = append(changes, newLine)
+				}
+			}
+
+			if len(changes) > 0 {
+				changeMessage := fmt.Sprintf("New log entries detected on server controller@%s:\n%s", ip, strings.Join(changes, "\n"))
+				log.Println(changeMessage)
+				sendTelegramMessage(changeMessage)
+			}
+
+			previousLogContent = output // Update the previous log content
+		} else {
+			log.Println("No changes detected in log.")
+		}
+	}
+}
+
+// Function to check if the new line is in the old lines
+func contains(lines []string, line string) bool {
+	for _, l := range lines {
+		if l == line {
+			return true
+		}
+	}
+	return false
+}
+
 func checkHealth() {
 	commands := viper.GetStringSlice("SSHCommands")
+
+	// Call the log change check function
+	checkLogChanges()
 
 	var messages []string
 	var errorMessages []string
