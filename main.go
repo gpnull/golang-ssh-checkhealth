@@ -16,7 +16,9 @@ import (
 )
 
 var previousLogContent string
-var isFirstCheck bool = true
+var previousValidatorLogContent string
+var isFirstErrorLogCheck bool = true
+var isFirstValidatorLogCheck bool = true
 
 func initConfig() {
 	viper.SetConfigName("config")
@@ -119,9 +121,9 @@ func checkErrorLogChanges() {
 			continue
 		}
 
-		if isFirstCheck {
+		if isFirstErrorLogCheck {
 			previousLogContent = output
-			isFirstCheck = false
+			isFirstErrorLogCheck = false
 			continue
 		}
 
@@ -172,16 +174,16 @@ func checkValidatorLogs() {
 			continue
 		}
 
-		if isFirstCheck {
-			previousLogContent = output
-			isFirstCheck = false
+		if isFirstValidatorLogCheck {
+			previousValidatorLogContent = output
+			isFirstValidatorLogCheck = false
 			continue
 		}
 
-		if output != previousLogContent {
+		if output != previousValidatorLogContent {
 			// Find the new content added
 			newLines := strings.Split(output, "\n")
-			oldLines := strings.Split(previousLogContent, "\n")
+			oldLines := strings.Split(previousValidatorLogContent, "\n")
 
 			// Get the newest lines
 			var changes []string
@@ -192,12 +194,10 @@ func checkValidatorLogs() {
 			}
 
 			if len(changes) > 0 {
-				changeMessage := fmt.Sprintf("New validator log entries detected on server controller@%s:\n%s", ip, strings.Join(changes, "\n"))
-				log.Println(changeMessage)
-				sendTelegramMessage(changeMessage)
+				log.Println(changes)
 			}
 
-			previousLogContent = output
+			previousValidatorLogContent = output
 		} else {
 			errorMessage := fmt.Sprintf("Error: Validator is not functioning on server controller@%s.", ip)
 			log.Println(errorMessage)
