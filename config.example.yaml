@@ -1,5 +1,9 @@
 telegramBotToken: "telegramBotToken"
 telegramChatID: 7393723946
-SSHCommands:
-  - "ssh controller@35.244.59.150 \"echo 'Uptime:' && uptime && echo 'CPU Usage:' && top -bn1 | grep 'Cpu(s)' && echo 'Memory Usage:' && free -m && echo 'Disk Usage:' && df -h /\""
-  - "ssh controller@34.93.102.218 \"echo 'Uptime:' && uptime && echo 'CPU Usage:' && top -bn1 | grep 'Cpu(s)' && echo 'Memory Usage:' && free -m && echo 'Disk Usage:' && df -h /\""
+
+IPs:
+  - "35.244.59.150"
+  - "34.93.102.218"
+SSHCommands: "ssh controller@%s \"echo 'Uptime:' && uptime && echo 'CPU Usage:' && top -bn1 | grep 'Cpu(s)' && echo 'Memory Usage:' && free -m && echo 'Disk Usage:' && df -h /\""
+SSHErrorLogCommand: 'ssh controller@%s "tail -n 5 /home/controller/meta-id/er1.log"'
+SSHValidatorLogCommand: 'ssh controller@%s "tail -n 1 /home/controller/meta-id/er2.log"'
