@@ -66,7 +66,7 @@ func parseSSHOutput(output string) (float64, float64, float64, string, error) {
 
 	uptime := lines[1]
 
-	// Extract CPU usage percentage
+	// CPU usage percentage
 	cpuUsageLine := strings.Split(lines[3], ":")
 	if len(cpuUsageLine) < 2 {
 		return 0, 0, 0, "", fmt.Errorf("unexpected CPU usage format")
@@ -80,7 +80,7 @@ func parseSSHOutput(output string) (float64, float64, float64, string, error) {
 		return 0, 0, 0, "", err
 	}
 
-	// Extract memory usage percentage
+	// memory usage percentage
 	memUsageLine := strings.Fields(lines[6])
 	if len(memUsageLine) < 7 {
 		return 0, 0, 0, "", fmt.Errorf("unexpected memory usage fields")
@@ -95,7 +95,7 @@ func parseSSHOutput(output string) (float64, float64, float64, string, error) {
 	}
 	memUsage := (usedMem / totalMem) * 100
 
-	// Extract disk usage percentage
+	// disk usage percentage
 	diskUsageLine := strings.Fields(lines[10])
 	if len(diskUsageLine) < 5 {
 		return 0, 0, 0, "", fmt.Errorf("unexpected disk usage fields")
@@ -108,7 +108,7 @@ func parseSSHOutput(output string) (float64, float64, float64, string, error) {
 	return cpuUsage, memUsage, diskUsage, uptime, nil
 }
 
-func checkLogChanges() {
+func checkErrorLogChanges() {
 	ips := viper.GetStringSlice("IPs")
 
 	for _, ip := range ips {
@@ -144,7 +144,7 @@ func checkLogChanges() {
 				sendTelegramMessage(changeMessage)
 			}
 
-			previousLogContent = output // Update the previous log content
+			previousLogContent = output
 		} else {
 			log.Println("No changes detected in log.")
 		}
@@ -161,6 +161,30 @@ func contains(lines []string, line string) bool {
 	return false
 }
 
+func checkValidatorLogs() {
+	ips := viper.GetStringSlice("IPs")
+	var logOutputs []string
+
+	for _, ip := range ips {
+		command := fmt.Sprintf(viper.GetString("SSHValidatorLogCommand"), ip)
+		output, err := runSSHCommand(command)
+		if err != nil {
+			log.Println("Error retrieving logs from server:", err)
+			continue
+		}
+		logOutputs = append(logOutputs, output)
+	}
+
+	if !areServersUniform(logOutputs) {
+		sendTelegramMessage("Alert: Servers are not operating uniformly!")
+	}
+}
+
+func areServersUniform(logOutputs []string) bool {
+	fmt.Println("logOutputs", logOutputs)
+	return true
+}
+
 func checkHealth() {
 	ips := viper.GetStringSlice("IPs")
 	var commands []string
@@ -168,9 +192,6 @@ func checkHealth() {
 		command := fmt.Sprintf(viper.GetString("SSHCommands"), ip)
 		commands = append(commands, command)
 	}
-
-	// Call the log change check function
-	checkLogChanges()
 
 	var messages []string
 	var errorMessages []string
@@ -214,17 +235,13 @@ func checkHealth() {
 	}
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	checkHealth()
-	fmt.Fprintf(w, "Health check completed. Check logs for details.")
-}
-
 func main() {
 	initConfig()
-	http.HandleFunc("/checkhealth", healthHandler)
 	go func() {
 		for {
 			checkHealth()
+			checkErrorLogChanges()
+			checkValidatorLogs()
 			time.Sleep(10 * time.Second)
 		}
 	}()
