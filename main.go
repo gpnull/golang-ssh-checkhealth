@@ -163,7 +163,6 @@ func contains(lines []string, line string) bool {
 
 func checkValidatorLogs() {
 	ips := viper.GetStringSlice("IPs")
-	var logOutputs []string
 
 	for _, ip := range ips {
 		command := fmt.Sprintf(viper.GetString("SSHValidatorLogCommand"), ip)
@@ -172,17 +171,39 @@ func checkValidatorLogs() {
 			log.Println("Error retrieving logs from server:", err)
 			continue
 		}
-		logOutputs = append(logOutputs, output)
-	}
 
-	if !areServersUniform(logOutputs) {
-		sendTelegramMessage("Alert: Servers are not operating uniformly!")
-	}
-}
+		if isFirstCheck {
+			previousLogContent = output
+			isFirstCheck = false
+			continue
+		}
 
-func areServersUniform(logOutputs []string) bool {
-	fmt.Println("logOutputs", logOutputs)
-	return true
+		if output != previousLogContent {
+			// Find the new content added
+			newLines := strings.Split(output, "\n")
+			oldLines := strings.Split(previousLogContent, "\n")
+
+			// Get the newest lines
+			var changes []string
+			for _, newLine := range newLines {
+				if !contains(oldLines, newLine) {
+					changes = append(changes, newLine)
+				}
+			}
+
+			if len(changes) > 0 {
+				changeMessage := fmt.Sprintf("New validator log entries detected on server controller@%s:\n%s", ip, strings.Join(changes, "\n"))
+				log.Println(changeMessage)
+				sendTelegramMessage(changeMessage)
+			}
+
+			previousLogContent = output
+		} else {
+			errorMessage := fmt.Sprintf("Error: Validator is not functioning on server controller@%s.", ip)
+			log.Println(errorMessage)
+			sendTelegramMessage(errorMessage)
+		}
+	}
 }
 
 func checkHealth() {
